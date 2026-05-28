@@ -1,0 +1,52 @@
+# ============================================================
+# DEVELOPMENT Docker Compose
+# Usage: docker-compose -f docker-compose.dev.yml up
+# ============================================================
+
+version: "3.9"
+
+networks:
+  dev-network:
+    driver: bridge
+
+services:
+  # ── Frontend Dev Server (Vite HMR) ────────────────────────
+  frontend-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+      target: development
+    image: devops-dashboard-dev:latest
+    container_name: devops-dashboard-dev
+    restart: unless-stopped
+    ports:
+      - "5173:5173"
+    volumes:
+      # Hot-reload: mount source into container
+      - ./src:/app/src:delegated
+      - ./public:/app/public:delegated
+      - ./index.html:/app/index.html:delegated
+      - ./vite.config.ts:/app/vite.config.ts:delegated
+      - ./tsconfig.json:/app/tsconfig.json:delegated
+      # Prevent overwriting node_modules with host's
+      - /app/node_modules
+    environment:
+      - NODE_ENV=development
+      - VITE_APP_ENV=development
+      - VITE_APP_VERSION=dev
+      - CHOKIDAR_USEPOLLING=true
+    networks:
+      - dev-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5173/"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    stdin_open: true
+    tty: true
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "5m"
+        max-file: "3"
